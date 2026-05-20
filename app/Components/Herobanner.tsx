@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useRef } from "react";
+import Image from "next/image";
+import { motion, useScroll, useTransform, useSpring } from "motion/react";
 
 interface Props {
   brandName?: string;
@@ -13,132 +14,184 @@ interface Props {
 }
 
 export default function HeroBanner({
-  brandName = "TOM ARCHER",
-  tagline = "Premium, The Inexpensive Way",
+  brandName       = "TOM ARCHER",
+  tagline         = "Premium, The Inexpensive Way",
   collectionTitle = "LATEST COLLECTION",
-  collectionDesc = "With an aura of mystique and a visage that hints at the depths of space itself, Icarus is more than a mere mortal. He is a guardian of the celestial realm.",
-  videoSrc = "",
-  posterSrc = "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=1600&q=85",
+  collectionDesc  = "With an aura of mystique and a visage that hints at the depths of space itself, Icarus is more than a mere mortal. He is a guardian of the celestial realm.",
+  videoSrc        = "",
+  posterSrc       = "/herotom.png",
 }: Props) {
-  const [clicked, setClicked] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // ── Raw scroll progress 0→1 over the section height ──────
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
+
+  // ── Apple-style spring: silky, heavy, no bounce ───────────
+  // Low stiffness = slow to accelerate (cinematic lag)
+  // High damping  = no oscillation at all
+  const sp = useSpring(scrollYProgress, {
+    stiffness: 38,
+    damping:   28,
+    restDelta: 0.0004,
+  });
+
+  // ── ALL animation values derived from scroll ──────────────
+
+  // Black screen dissolves away
+  const blackOpacity   = useTransform(sp, [0, 0.36], [1, 0]);
+
+  // Background image zooms in from 82% → 100% (Apple's signature move)
+  const imgScale       = useTransform(sp, [0, 0.60], [0.82, 1]);
+  const imgOpacity     = useTransform(sp, [0, 0.36], [0, 1]);
+  // Parallax drift — image slides up as you scroll past
+  const imgY           = useTransform(sp, [0, 1], ["0%", "16%"]);
+
+  // Logo: punches from circle → fills screen
+  const logoScale      = useTransform(sp, [0.03, 0.44], [1, 22]);
+  const logoOpacity    = useTransform(sp, [0.03, 0.28], [1, 0]);
+
+  // Intro text fades + lifts out
+  const textOpacity    = useTransform(sp, [0, 0.20], [1, 0]);
+  const textY          = useTransform(sp, [0, 0.20], [0, -14]);
+
+  // Scroll hint vanishes on first movement
+  const hintOpacity    = useTransform(sp, [0, 0.07], [1, 0]);
+
+  // Collection info slides up + fades in after image fully revealed
+  const infoOpacity    = useTransform(sp, [0.58, 0.82], [0, 1]);
+  const infoY          = useTransform(sp, [0.58, 0.82], [28, 0]);
 
   return (
-    <div
-      className="relative w-full bg-black overflow-hidden select-none cursor-pointer"
-      style={{ height: "100svh", minHeight: 500 }}
-      onClick={() => !clicked && setClicked(true)}
-    >
+    /*
+      Outer div is 250svh tall — gives the scroll runway
+      Inner div is sticky so it stays fixed while parent scrolls
+    */
+    <div ref={containerRef} className="relative" style={{ height: "250svh" }}>
+      <div className="sticky top-0 overflow-hidden bg-black" style={{ height: "100svh", minHeight: 500 }}>
 
-      {/* ── VIDEO: zooms in from 0.8 → 1 simultaneously ── */}
-      <motion.div
-        className="absolute inset-0"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={clicked ? { scale: 1, opacity: 1 } : { scale: 0.8, opacity: 0 }}
-        transition={{ duration: 2.2, ease: [0.15, 0, 0.4, 1] }}
-      >
-        {videoSrc ? (
-          <video src={videoSrc} autoPlay muted loop playsInline poster={posterSrc}
-            className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <img src={posterSrc} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-      </motion.div>
-
-      {/* ── BLACK BG: fades out immediately on click ── */}
-      <motion.div
-        className="absolute inset-0 bg-black"
-        animate={clicked ? { opacity: 0 } : { opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        style={{ pointerEvents: "none" }}
-      />
-
-      {/* ── INTRO LAYER: logo + text, centered ── */}
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center"
-        style={{ pointerEvents: clicked ? "none" : "auto" }}
-      >
-
-        {/* LOGO ONLY — zooms in (scale 1 → 16) */}
-        <motion.svg
-          width="110" height="110" viewBox="0 0 110 110" fill="none"
-          animate={clicked ? { scale: 16, opacity: 0 } : { scale: 1, opacity: 1 }}
-          transition={clicked
-            ? { duration: 2.2, ease: [0.15, 0, 0.4, 1] }
-            : { duration: 0 }
-          }
-        >
-          <circle cx="55" cy="55" r="52" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-          <circle cx="55" cy="55" r="44" stroke="white" strokeWidth="0.6" opacity="0.3"/>
-          <path d="M28 76 L42 30 L55 66 L68 30 L82 76"
-            stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-          <line x1="33" y1="44" x2="51" y2="44" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-          <line x1="60" y1="53" x2="76" y2="53" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-        </motion.svg>
-
-        {/* TEXT — fades out quickly, stays in position */}
+        {/* ══ BACKGROUND IMAGE / VIDEO ════════════════════════ */}
         <motion.div
-          className="flex flex-col items-center gap-2 mt-4"
-          animate={clicked ? { opacity: 0 } : { opacity: 1 }}
-          transition={{ duration: 0.35, ease: "easeIn" }}
+          className="absolute inset-0"
+          style={{ scale: imgScale, opacity: imgOpacity, y: imgY }}
         >
-          <h1
-            className="text-white font-extrabold tracking-[0.3em] uppercase text-center"
-            style={{ fontSize: "clamp(2rem,7vw,5rem)", fontFamily: "'Trebuchet MS',sans-serif" }}
+          {videoSrc ? (
+            <video
+              src={videoSrc} poster={posterSrc}
+              autoPlay muted loop playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <Image
+              src={posterSrc} alt={brandName}
+              fill
+              className="object-cover object-top"
+              sizes="100vw"
+              priority
+            />
+          )}
+          {/* Readability gradient at bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/[0.08] to-transparent" />
+        </motion.div>
+
+        {/* ══ BLACK VEIL: fades out as image appears ══════════ */}
+        <motion.div
+          className="absolute inset-0 bg-black pointer-events-none z-10"
+          style={{ opacity: blackOpacity }}
+        />
+
+        {/* ══ INTRO LAYER ═════════════════════════════════════ */}
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none">
+
+          {/* ── LOGO: perfectly centered circle, Next Image, no border ── */}
+          <motion.div
+            style={{ scale: logoScale, opacity: logoOpacity }}
+            className="flex items-center justify-center"
           >
-            {brandName}
-          </h1>
-          <p className="text-white/45 text-sm tracking-widest italic"
-            style={{ fontFamily: "Georgia,serif" }}>
-            {tagline}
+            {/*
+              Outer ring (subtle) + inner circle crop of posterSrc.
+              Matches Image 2 style: dark circle, centered icon, thin ring.
+              At scale 22 this fills the entire viewport seamlessly.
+            */}
+            <div className="relative flex items-center justify-center">
+              {/* Outer thin ring — matches image 2 */}
+              <div className="absolute w-[120px] h-[120px] rounded-full border border-white/20" />
+
+              {/* Inner dark circle with image crop */}
+              <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-black/60 flex items-center justify-center">
+                <Image
+                  src={posterSrc}
+                  alt={brandName}
+                  fill
+                  className="object-cover object-center"
+                  sizes="100px"
+                  priority
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ── BRAND NAME + TAGLINE ─────────────────────────── */}
+          <motion.div
+            className="flex flex-col items-center gap-2 mt-5"
+            style={{ opacity: textOpacity, y: textY }}
+          >
+            <h1
+              className="text-white font-extrabold tracking-[0.3em] uppercase text-center m-0"
+              style={{ fontSize: "clamp(2rem,7vw,5rem)", fontFamily: "'Trebuchet MS',sans-serif" }}
+            >
+              {brandName}
+            </h1>
+            <p
+              className="text-white/40 text-sm tracking-widest italic m-0"
+              style={{ fontFamily: "Georgia,serif" }}
+            >
+              {tagline}
+            </p>
+          </motion.div>
+
+          {/* ── SCROLL HINT ──────────────────────────────────── */}
+          <motion.div
+            className="absolute bottom-8 flex flex-col items-center gap-2"
+            style={{ opacity: hintOpacity }}
+          >
+            <span className="text-white/30 text-[10px] tracking-[0.28em] uppercase">
+              Scroll Down
+            </span>
+            <motion.div
+              animate={{ y: [0, 7, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="rgba(255,255,255,0.28)" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* ══ COLLECTION INFO: appears after reveal ═══════════ */}
+        <motion.div
+          className="absolute bottom-14 left-6 max-w-lg z-30 pointer-events-none"
+          style={{ opacity: infoOpacity, y: infoY }}
+        >
+          <h2
+            className="text-white font-extrabold tracking-[0.2em] uppercase mb-3"
+            style={{ fontSize: "clamp(1.4rem,3.5vw,2.4rem)", fontFamily: "'Trebuchet MS',sans-serif" }}
+          >
+            {collectionTitle}
+          </h2>
+          <p
+            className="text-white/60 leading-relaxed uppercase tracking-wide"
+            style={{ fontSize: "clamp(0.72rem,1.2vw,0.85rem)" }}
+          >
+            {collectionDesc}
           </p>
         </motion.div>
 
-        {/* Scroll hint */}
-        <motion.div
-          className="absolute bottom-8 flex flex-col items-center gap-2 pointer-events-none"
-          animate={clicked ? { opacity: 0 } : { opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <span className="text-white/35 text-[10px] tracking-[0.25em] uppercase">Scroll Down</span>
-          <motion.div animate={{ y: [0, 6, 0] }} transition={{ repeat: Infinity, duration: 1.4 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 5v14M5 12l7 7 7-7"/>
-            </svg>
-          </motion.div>
-        </motion.div>
       </div>
-
-      {/* ── COLLECTION INFO ── */}
-      <motion.div
-        className="absolute bottom-14 left-6 max-w-lg"
-        animate={clicked ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-        transition={{ duration: 0.6, delay: clicked ? 2.0 : 0, ease: [0.22, 1, 0.36, 1] }}
-        style={{ pointerEvents: "none" }}
-      >
-        <h2
-          className="text-white font-extrabold tracking-[0.2em] uppercase mb-3"
-          style={{ fontSize: "clamp(1.4rem,3.5vw,2.4rem)", fontFamily: "'Trebuchet MS',sans-serif" }}
-        >
-          {collectionTitle}
-        </h2>
-        <p className="text-white/60 text-xs sm:text-sm leading-relaxed uppercase tracking-wide">
-          {collectionDesc}
-        </p>
-      </motion.div>
-
-      {/* ── RESET ── */}
-      <motion.button
-        className="absolute top-5 left-5 text-white/55 hover:text-white text-[11px] tracking-[0.2em] uppercase border border-white/20 hover:border-white/50 px-3 py-1.5 rounded-sm transition-colors"
-        animate={clicked ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ delay: clicked ? 2.2 : 0 }}
-        onClick={(e) => { e.stopPropagation(); setClicked(false); }}
-        style={{ pointerEvents: clicked ? "auto" : "none" }}
-      >
-        [Reset]
-      </motion.button>
-
     </div>
   );
 }

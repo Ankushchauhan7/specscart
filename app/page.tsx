@@ -8,14 +8,16 @@ import Header from "./Components/Header";
 import CollectionsCarousel from "./Components/Collectionscarousel";
 import JuicyEdit from "./Components/Juicyedit";
 import HeroBanner from "./Components/Herobanner";
+import BrandScrollSection from "./Components/appple";
 
 export default function Home() {
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
+      {/* <BrandScrollSection/> */}
       <HeroBanner
         videoSrc="https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4"
-        posterSrc="https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=1600&q=85"
+        posterSrc="/herotom.png"
         brandName="TOM ARCHER"
         tagline="Premium, The Inexpensive Way"
       />
@@ -82,7 +84,7 @@ export default function Home() {
         </p>
       </section>
       <BrandShowcase />
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
